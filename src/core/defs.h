@@ -16,6 +16,7 @@
 #include <stdint.h>
 
 #include "../include/nng/nng.h"
+#include "panic.h"
 
 // C compilers may get unhappy when named arguments are not used.  While
 // there are things like __attribute__((unused)) which are arguably
@@ -23,8 +24,6 @@
 #define NNI_ARG_UNUSED(x) ((void) x)
 
 #ifndef NDEBUG
-extern void nni_panic(const char *fmt, ...);
-
 #define NNI_ASSERT(x) \
 	if (!(x))     \
 	nni_panic("%s: %d: assert err: %s", __FILE__, __LINE__, #x)

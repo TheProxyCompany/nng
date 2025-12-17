@@ -1,0 +1,99 @@
+name: XCFramework Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-xcframework:
+    name: Build XCFramework
+    runs-on: macos-14
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install ninja
+        run: brew install ninja
+
+      - name: Build arm64
+        run: |
+          mkdir build-arm64 && cd build-arm64
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DNNG_TESTS=OFF \
+            -DNNG_TOOLS=OFF \
+            -DNNG_ENABLE_TLS=OFF \
+            ..
+          ninja
+
+      - name: Build x86_64
+        run: |
+          mkdir build-x86_64 && cd build-x86_64
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DNNG_TESTS=OFF \
+            -DNNG_TOOLS=OFF \
+            -DNNG_ENABLE_TLS=OFF \
+            ..
+          ninja
+
+      - name: Create fat binary
+        run: |
+          mkdir -p universal
+          lipo -create \
+            build-arm64/libnng.a \
+            build-x86_64/libnng.a \
+            -output universal/libnng.a
+
+      - name: Create XCFramework
+        run: |
+          xcodebuild -create-xcframework \
+            -library universal/libnng.a \
+            -headers include \
+            -output nng.xcframework
+
+      - name: Zip XCFramework
+        run: |
+          zip -r nng.xcframework.zip nng.xcframework
+
+      - name: Calculate checksum
+        id: checksum
+        run: |
+          CHECKSUM=$(shasum -a 256 nng.xcframework.zip | cut -d ' ' -f 1)
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "Checksum: $CHECKSUM"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nng-xcframework
+          path: nng.xcframework.zip
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nng.xcframework.zip
+          body: |
+            NNG XCFramework for Swift Package Manager
+
+            **Checksum (SHA-256):** `${{ steps.checksum.outputs.checksum }}`
+
+            Add to Package.swift:
+            ```swift
+            .binaryTarget(
+                name: "nng",
+                url: "https://github.com/TheProxyCompany/nng/releases/download/${{ github.ref_name }}/nng.xcframework.zip",
+                checksum: "${{ steps.checksum.outputs.checksum }}"
+            )
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

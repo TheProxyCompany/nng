@@ -60,17 +60,6 @@ jobs:
           cat > prepared-headers/module.modulemap << 'EOF'
           module nng {
               header "nng/nng.h"
-              header "nng/protocol/bus0/bus.h"
-              header "nng/protocol/pair0/pair.h"
-              header "nng/protocol/pair1/pair.h"
-              header "nng/protocol/pipeline0/pull.h"
-              header "nng/protocol/pipeline0/push.h"
-              header "nng/protocol/pubsub0/pub.h"
-              header "nng/protocol/pubsub0/sub.h"
-              header "nng/protocol/reqrep0/rep.h"
-              header "nng/protocol/reqrep0/req.h"
-              header "nng/protocol/survey0/respond.h"
-              header "nng/protocol/survey0/survey.h"
               link "nng"
               export *
           }

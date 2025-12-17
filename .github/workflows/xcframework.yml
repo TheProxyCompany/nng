@@ -53,11 +53,34 @@ jobs:
             build-x86_64/libnng.a \
             -output universal/libnng.a
 
+      - name: Prepare headers with modulemap
+        run: |
+          mkdir -p prepared-headers
+          cp -R include/* prepared-headers/
+          cat > prepared-headers/module.modulemap << 'EOF'
+          module nng {
+              header "nng/nng.h"
+              header "nng/protocol/bus0/bus.h"
+              header "nng/protocol/pair0/pair.h"
+              header "nng/protocol/pair1/pair.h"
+              header "nng/protocol/pipeline0/pull.h"
+              header "nng/protocol/pipeline0/push.h"
+              header "nng/protocol/pubsub0/pub.h"
+              header "nng/protocol/pubsub0/sub.h"
+              header "nng/protocol/reqrep0/rep.h"
+              header "nng/protocol/reqrep0/req.h"
+              header "nng/protocol/survey0/respond.h"
+              header "nng/protocol/survey0/survey.h"
+              link "nng"
+              export *
+          }
+          EOF
+
       - name: Create XCFramework
         run: |
           xcodebuild -create-xcframework \
             -library universal/libnng.a \
-            -headers include \
+            -headers prepared-headers \
             -output nng.xcframework
 
       - name: Zip XCFramework
